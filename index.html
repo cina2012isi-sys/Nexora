@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexora</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" href="img/Favicon.png" type="image/x-icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="header__wraper">
+            <nav class="header__nav">
+                <img src="img/nexora.png" alt="">
+                <ul class="header__list">
+                    <li class="header__list-item">
+                    <a class="header__list-link" href="index.html">Home</a>
+                </li>
+                <li class="header__list-item">
+                    <a class="header__list-link" href="Updates.html">Updates</a>
+                </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <!DOCTYPE html>
+<html>
+<head>
+    <title>fourm</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <h1>fourm</h1>
+
+    <!-- Здесь будут сообщения -->
+    <div id="posts"></div>
+
+
+    <!-- Поле написания сообщения -->
+    <div class="post-form">
+
+        <div id="replyInfo" class="reply-info" style="display: none;">
+            Answer to user: <b id="replyTo"></b>
+            <button onclick="cancelReply()">Отмена</button>
+        </div>
+
+        <textarea
+            id="messageInput"
+            placeholder="Write messeage..."
+        ></textarea>
+
+        <button onclick="addPost()">Post</button>
+
+    </div>
+
+
+<script>
+
+let replyToId = null;
+
+
+// Загружаем сообщения
+function loadPosts() {
+
+    const posts = JSON.parse(localStorage.getItem("forumPosts")) || [];
+
+    const postsContainer = document.getElementById("posts");
+
+    postsContainer.innerHTML = "";
+
+    posts.forEach(post => {
+        showPost(post);
+    });
+}
+
+
+// Показываем одно сообщение
+function showPost(post) {
+
+    const postsContainer = document.getElementById("posts");
+
+    const postElement = document.createElement("div");
+
+    postElement.className = "post";
+
+    postElement.innerHTML = `
+        <div class="post-header">
+            <b>${post.author}</b>
+            <span>${post.date}</span>
+        </div>
+
+        ${
+            post.replyTo
+            ? `<div class="reply-to">
+                Answer to user<b>${post.replyTo}</b>
+              </div>`
+            : ""
+        }
+
+        <div class="post-text">
+            ${post.text}
+        </div>
+
+        <button class="reply-button" onclick="replyTo(${post.id}, '${post.author}')">
+            Answer
+        </button>
+    `;
+
+    postsContainer.prepend(postElement);
+}
+
+
+// Добавляем сообщение
+function addPost() {
+
+    const input = document.getElementById("messageInput");
+
+    const text = input.value.trim();
+
+    if (text === "") {
+        return;
+    }
+
+
+    const posts = JSON.parse(localStorage.getItem("forumPosts")) || [];
+
+
+    const newPost = {
+
+        id: Date.now(),
+
+        author: "Anonim",
+
+        text: text,
+
+        date: new Date().toLocaleString(),
+
+        replyTo: replyToId
+            ? document.getElementById("replyTo").textContent
+            : null
+    };
+
+
+    posts.push(newPost);
+
+
+    localStorage.setItem(
+        "forumPosts",
+        JSON.stringify(posts)
+    );
+
+
+    input.value = "";
+
+    cancelReply();
+
+    loadPosts();
+}
+
+
+// Ответ на сообщение
+function replyTo(id, author) {
+
+    replyToId = id;
+
+    document.getElementById("replyInfo").style.display = "block";
+
+    document.getElementById("replyTo").textContent = author;
+
+    document.getElementById("messageInput").focus();
+
+}
+
+
+// Отменить ответ
+function cancelReply() {
+
+    replyToId = null;
+
+    document.getElementById("replyInfo").style.display = "none";
+}
+
+
+// Загружаем сообщения при открытии страницы
+loadPosts();
+
+</script>
+
+</body>
+</html>
+</body>
+</html>
