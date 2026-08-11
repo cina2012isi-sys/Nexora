@@ -1,14 +1,13 @@
 const SUPABASE_URL = "https://ftwfmoqnwhnrqbbcqjpl.supabase.co/rest/v1/";
 const SUPABASE_KEY = "sb_publishable_NLX3HgBrQjAvmUUI9Jjx6A_9glPH1vq";
 
-const supabase = window.supabase.createClient(
+const supabaseClient = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
 );
 
 
-// Realtime
-supabase
+supabaseClient
     .channel("messages-channel")
     .on(
         "postgres_changes",
@@ -22,4 +21,3 @@ supabase
         }
     )
     .subscribe();
-
