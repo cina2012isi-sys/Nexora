@@ -8,7 +8,7 @@ const supabaseClient = window.supabase.createClient(
 
 let replyToId = null;
 
-// Загрузка сообщений из Supabase
+// Загрузка сообщений
 async function loadPosts() {
     const { data, error } = await supabaseClient
         .from("messages")
@@ -21,6 +21,12 @@ async function loadPosts() {
     }
 
     const postsContainer = document.getElementById("posts");
+
+    if (!postsContainer) {
+        console.error("Не найден элемент #posts");
+        return;
+    }
+
     postsContainer.innerHTML = "";
 
     data.forEach(post => {
@@ -28,16 +34,18 @@ async function loadPosts() {
     });
 }
 
-// Безопасный вывод текста
+// Защита текста
 function escapeHtml(text) {
     const div = document.createElement("div");
     div.textContent = text ?? "";
     return div.innerHTML;
 }
 
-// Показ одного сообщения
+// Показ сообщения
 function showPost(post) {
     const postsContainer = document.getElementById("posts");
+
+    if (!postsContainer) return;
 
     const postElement = document.createElement("div");
     postElement.className = "post";
@@ -45,18 +53,8 @@ function showPost(post) {
     postElement.innerHTML = `
         <div class="post-header">
             <b>${escapeHtml(post.author)}</b>
-            <span>${escapeHtml(post.date)}</span>
+            <span>${escapeHtml(post.created_at)}</span>
         </div>
-
-        ${
-            post.replyTo
-                ? `
-                    <div class="reply-to">
-                        Answer to user: <b>${escapeHtml(post.replyTo)}</b>
-                    </div>
-                `
-                : ""
-        }
 
         <div class="post-text">
             ${escapeHtml(post.text)}
@@ -76,6 +74,12 @@ function showPost(post) {
 // Добавление сообщения
 async function addPost() {
     const input = document.getElementById("messageInput");
+
+    if (!input) {
+        console.error("Не найден #messageInput");
+        return;
+    }
+
     const text = input.value.trim();
 
     if (text === "") {
@@ -83,21 +87,20 @@ async function addPost() {
     }
 
     const newPost = {
+        id: Date.now(),
         author: "Anonim",
-        text: text,
-        date: new Date().toLocaleString(),
-        replyTo: replyToId
-            ? document.getElementById("replyTo").textContent
-            : null
+        text: text
     };
+
+    console.log("Отправляем:", newPost);
 
     const { error } = await supabaseClient
         .from("messages")
         .insert([newPost]);
 
     if (error) {
-        console.error("Ошибка отправки сообщения:", error);
-        alert("Сообщение не отправилось. Открой F12 → Console.");
+        console.error("Ошибка Supabase:", error);
+        alert("Ошибка отправки сообщения: " + error.message);
         return;
     }
 
@@ -107,20 +110,36 @@ async function addPost() {
     await loadPosts();
 }
 
-// Ответ на сообщение
+// Ответ
 function replyTo(id, author) {
     replyToId = id;
 
-    document.getElementById("replyInfo").style.display = "block";
-    document.getElementById("replyTo").textContent = author;
-    document.getElementById("messageInput").focus();
+    const replyInfo = document.getElementById("replyInfo");
+    const replyToElement = document.getElementById("replyTo");
+    const input = document.getElementById("messageInput");
+
+    if (replyInfo) {
+        replyInfo.style.display = "block";
+    }
+
+    if (replyToElement) {
+        replyToElement.textContent = author;
+    }
+
+    if (input) {
+        input.focus();
+    }
 }
 
-// Отменить ответ
+// Отмена ответа
 function cancelReply() {
     replyToId = null;
 
-    document.getElementById("replyInfo").style.display = "none";
+    const replyInfo = document.getElementById("replyInfo");
+
+    if (replyInfo) {
+        replyInfo.style.display = "none";
+    }
 }
 
 // Realtime
@@ -138,10 +157,10 @@ supabaseClient
         }
     )
     .subscribe((status) => {
-        console.log("Realtime status:", status);
+        console.log("Realtime:", status);
     });
 
-// При открытии страницы
+// Загрузка после открытия страницы
 document.addEventListener("DOMContentLoaded", () => {
     loadPosts();
 });
