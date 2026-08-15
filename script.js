@@ -1,166 +1,78 @@
-const SUPABASE_URL = "https://ftwfmoqnwhnrqbbcqjpl.supabase.co";
-const SUPABASE_KEY = "sb_publishable_NLX3HgBrQjAvmUUI9Jjx6A_9glPH1vq";
+// ==========================================
+// НАСТРОЙКИ СЕРВЕРА И ЭЛЕМЕНТОВ
+// ==========================================
+// Укажи адрес твоего сервера (IP или домен)
+const API_URL = 'http://localhost:3000/api/messages';
 
-const supabaseClient = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
+// Находим твои существующие элементы на странице по их ID
+const postButton = document.getElementById('postButton'); // Твоя кнопка "Пост"
+const messageInput = document.getElementById('messageInput'); // Твоё поле ввода
+const postsContainer = document.getElementById('postsContainer'); // Контейнер, где выводятся посты
 
-let replyToId = null;
-
-// Загрузка сообщений
+// ==========================================
+// 1. ПОЛУЧЕНИЕ И ОТОБРАЖЕНИЕ СООБЩЕНИЙ
+// ==========================================
 async function loadPosts() {
-    const { data, error } = await supabaseClient
-        .from("messages")
-        .select("*")
-        .order("id", { ascending: true });
-
-    if (error) {
-        console.error("Ошибка загрузки сообщений:", error);
-        return;
-    }
-
-    const postsContainer = document.getElementById("posts");
-
-    if (!postsContainer) {
-        console.error("Не найден элемент #posts");
-        return;
-    }
-
-    postsContainer.innerHTML = "";
-
-    data.forEach(post => {
-        showPost(post);
+  try {
+    const response = await fetch(API_URL);
+    if (!response.ok) throw new Error('Ошибка сети');
+    
+    const posts = await response.json();
+    
+    // Очищаем контейнер перед обновлением
+    postsContainer.innerHTML = '';
+    
+    // Рисуем каждое сообщение с сервера
+    posts.forEach(post => {
+      const postElement = document.createElement('div');
+      postElement.className = 'post'; // Твой CSS-класс для сообщения
+      postElement.textContent = post.text;
+      
+      postsContainer.appendChild(postElement);
     });
+  } catch (error) {
+    console.error('Не удалось загрузить сообщения:', error);
+  }
 }
 
-// Защита текста
-function escapeHtml(text) {
-    const div = document.createElement("div");
-    div.textContent = text ?? "";
-    return div.innerHTML;
-}
+// ==========================================
+// 2. ОТПРАВКА НОВОГО СООБЩЕНИЯ
+// ==========================================
+async function sendPost() {
+  const text = messageInput.value.trim();
+  
+  // Если поле пустое — ничего не отправляем
+  if (!text) return;
 
-// Показ сообщения
-function showPost(post) {
-    const postsContainer = document.getElementById("posts");
-
-    if (!postsContainer) return;
-
-    const postElement = document.createElement("div");
-    postElement.className = "post";
-
-    postElement.innerHTML = `
-        <div class="post-header">
-            <b>${escapeHtml(post.author)}</b>
-            <span>${escapeHtml(post.created_at)}</span>
-        </div>
-
-        <div class="post-text">
-            ${escapeHtml(post.text)}
-        </div>
-
-        <button
-            class="reply-button"
-            onclick="replyTo(${post.id}, '${escapeHtml(post.author)}')"
-        >
-            Answer
-        </button>
-    `;
-
-    postsContainer.prepend(postElement);
-}
-
-// Добавление сообщения
-async function addPost() {
-    const input = document.getElementById("messageInput");
-
-    if (!input) {
-        console.error("Не найден #messageInput");
-        return;
-    }
-
-    const text = input.value.trim();
-
-    if (text === "") {
-        return;
-    }
-
-    const newPost = {
-        id: Date.now(),
-        author: "Anonim",
-        text: text
-    };
-
-    console.log("Отправляем:", newPost);
-
-    const { error } = await supabaseClient
-        .from("messages")
-        .insert([newPost]);
-
-    if (error) {
-        console.error("Ошибка Supabase:", error);
-        alert("Ошибка отправки сообщения: " + error.message);
-        return;
-    }
-
-    input.value = "";
-    cancelReply();
-
-    await loadPosts();
-}
-
-// Ответ
-function replyTo(id, author) {
-    replyToId = id;
-
-    const replyInfo = document.getElementById("replyInfo");
-    const replyToElement = document.getElementById("replyTo");
-    const input = document.getElementById("messageInput");
-
-    if (replyInfo) {
-        replyInfo.style.display = "block";
-    }
-
-    if (replyToElement) {
-        replyToElement.textContent = author;
-    }
-
-    if (input) {
-        input.focus();
-    }
-}
-
-// Отмена ответа
-function cancelReply() {
-    replyToId = null;
-
-    const replyInfo = document.getElementById("replyInfo");
-
-    if (replyInfo) {
-        replyInfo.style.display = "none";
-    }
-}
-
-// Realtime
-supabaseClient
-    .channel("messages-channel")
-    .on(
-        "postgres_changes",
-        {
-            event: "*",
-            schema: "public",
-            table: "messages"
-        },
-        () => {
-            loadPosts();
-        }
-    )
-    .subscribe((status) => {
-        console.log("Realtime:", status);
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ text: text })
     });
 
-// Загрузка после открытия страницы
-document.addEventListener("DOMContentLoaded", () => {
-    loadPosts();
-});
+    if (response.ok) {
+      messageInput.value = ''; // Очищаем поле ввода
+      loadPosts(); // Сразу обновляем список постов на экране
+    }
+  } catch (error) {
+    console.error('Ошибка при отправке сообщения:', error);
+  }
+}
+
+// ==========================================
+// 3. СОБЫТИЯ И АВТООБНОВЛЕНИЕ
+// ==========================================
+
+// Вешаем отправку на клик по кнопке "Пост"
+if (postButton) {
+  postButton.addEventListener('click', sendPost);
+}
+
+// Загружаем посты при первом открытии страницы
+loadPosts();
+
+// Проверяем новые сообщения от других пользователей каждые 3 секунды
+setInterval(loadPosts, 3000);
